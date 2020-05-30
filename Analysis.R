@@ -47,19 +47,20 @@ library(reshape2) # melting (necessary for plotting)
 # - lexicons
 
 # Stanford SocialSent
-pos_neg_lex=read.table("./lexicons/worldnews.tsv", header=F)
-head(pos_neg_lex)
+# pos_neg_lex=read.table("./lexicons/worldnews.tsv", header=F)
+# head(pos_neg_lex)
 
 # NRC Emotion Intensity Lexicon
-emo_lex=read.table("./lexicons/NRC-Emotion-Intensity-Lexicon-v1.txt", sep="\t", header=T)
+# emo_lex=read.table("./lexicons/NRC-Emotion-Intensity-Lexicon-v1.txt", sep="\t", header=T)
+# head(emo_lex)
 
 
 # - news articles 
 
-kh_virus <- read.csv("./articles/articles_koreaherald_coronavirus_date.csv", header = T)
-kh_covid <- read.csv("./articles/articles_koreaherald_covid19_date.csv", header = T)
-kt_virus <- read.csv("./articles/articles_koreatimes_coronavirus.csv", header = T, sep=";")
-kt_covid <- read.csv("./articles/articles_koreatimes_covid19.csv", header = T, sep=";")
+# kh_virus <- read.csv("./articles/articles_koreaherald_coronavirus_date.csv", header = T)
+# kh_covid <- read.csv("./articles/articles_koreaherald_covid19_date.csv", header = T)
+# kt_virus <- read.csv("./articles/articles_koreatimes_coronavirus.csv", header = T, sep=";")
+# kt_covid <- read.csv("./articles/articles_koreatimes_covid19.csv", header = T, sep=";")
 
 
 # - prepare sample for coding
@@ -98,12 +99,13 @@ date_transform = function(row){
 
 
 # - aggreagate articles from all sources in single data frame
-articles = rbind(kh_virus, kh_covid, kt_virus, kt_covid)
+articles = rbind(sample1, sample2)
+# articles = rbind(kh_virus, kh_covid, kt_virus, kt_covid)
 articles = distinct(articles) # eliminate copies (articles can contain both 'coronvirus', and 'covid-19')
 articles <- articles[order(articles$DATE), ] # order by date
 rownames(articles)<-NULL # row ids to default
 articles <- articles[,c(1, 6)] # project only date and content
-nrow(articles)
+
 
 
 # - group articles per day
@@ -210,21 +212,22 @@ score.sentiment = function(articles, .progress='none') {
 } 
 
 # ---> TURN ON to calculate (takes very long, thus saved in file)
-words=score.sentiment(aggregates)
-str(words)
-results[,-1] = as.data.frame(words) # assign values to result data frame
-
-
-write.csv(results, file="./articles/results_kh.csv", row.names=F, sep=";")
-results = read.csv(file="./articles/results_kh.csv", row.names = NULL, header=T)
-print(results)
+# words=score.sentiment(aggregates)
+# str(words)
+# results[,-1] = as.data.frame(words) # assign values to result data frame
+# 
+# 
+# write.csv(results, file="./articles/results.csv", row.names=F, sep=";")
+results = read.csv(file="./articles/results.csv", row.names = NULL, header=T)
+tail(results)
+# cat("number of articles processed: ", nrow(num_articles))
 
 
 
 # ==== PLOT ====
 
-results_melt = melt(results[c(1,2:4)], id=c("DATE")) # melt values into single column data frame
-head(results_melt)
+results_melt = melt(results[,c(1,5:12)], id=c("DATE")) # melt values into single column data frame
+tail(results_melt)
 ggplot(results_melt) + geom_line(aes(x=as.Date(DATE), y=value, colour=variable)) + 
   theme_bw() +
   scale_color_brewer(palette="Paired") +
