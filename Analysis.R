@@ -34,6 +34,7 @@ getwd()
 
 
 library(ggplot2) # plotting
+# library(rJava)
 # library(KoNLP)
 library(dplyr) # data processing
 library(plyr)
@@ -228,7 +229,7 @@ tail(results)
 
 results_melt = melt(results[,c(1,5:12)], id=c("DATE")) # melt values into single column data frame
 tail(results_melt)
-ggplot(results_melt) + geom_line(aes(x=as.Date(DATE), y=value, colour=variable)) + 
+ggplot(results_melt, aes(x=as.Date(DATE), y=value, colour=variable, group=variable)) + geom_line() +
   theme_bw() +
   scale_color_brewer(palette="Paired") +
   # theme(
