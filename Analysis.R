@@ -63,6 +63,8 @@ head(emo_lex)
 # - News articles 
 # kh_virus <- read.csv("./articles/articles_koreaherald_coronavirus.csv", header = T, sep=";")
 # kh_covid <- read.csv("./articles/articles_koreaherald_covid19.csv", header = T, sep=";")
+# kh_virus <- read.csv("./articles/articles_koreaherald_coronavirus_date.csv", header = T)
+# kh_covid <- read.csv("./articles/articles_koreaherald_covid19_date.csv", header = T)
 # kt_virus <- read.csv("./articles/articles_koreatimes_coronavirus.csv", header = T, sep=";")
 # kt_covid <- read.csv("./articles/articles_koreatimes_covid19.csv", header = T, sep=";")
 
@@ -111,6 +113,7 @@ articles$DATE = as.Date(articles$DATE) # read dates (strings) as Date type -> ne
 articles <- articles[order(articles$DATE), ] # order by date
 rownames(articles)<-NULL # row ids to default
 articles <- articles[,c(1, 6)] # project only date and content
+cat("number of articles: ",nrow(articles))
 
 
 
@@ -191,17 +194,17 @@ sentiment_scores = function(articles, .progress='none') {
                           neg_count = neg_count + 1
                         }
                       }
-                      emo_occurances = which(emo_lex[,1]==word)
-                      for (i in range(length(emo_occurances))){
-                        emo_index = emo_occurances[i]
-                        val = emo_lex[emo_index, 3]
-                        category = emo_lex[emo_index, 2]
+                      emo_occurances = which(emo_lex[,1]==word) # find row ids of all occurances of the word in emo lexicon
+                      for (i in range(length(emo_occurances))){ # for each occurance (usually 8), add the score for the respective emotion
+                        emo_index = emo_occurances[i]  # restore row id
+                        val = emo_lex[emo_index, 3]     # get value for emotion by row id
+                        category = emo_lex[emo_index, 2]  # find type of emotion by row id
                         # print(word)
                         # print(match(category, emotions))
-                        emo_values[match(category, emotions)] = emo_values[match(category, emotions)] + val
+                        emo_values[match(category, emotions)] = emo_values[match(category, emotions)] + val # add to respective value in emotions vector
                       }
                    }
-                   objectivity = 1 - ((pos_count+neg_count)/length(words)) # objectivity = ratio of subjective words to text length
+                   objectivity = 1 - ((pos_count+neg_count)/length(words)) # objectivity = inverse ratio of subjective words to text length
                    positivity = pos_score/length(words)
                    negativity = neg_score/length(words)
                    pos_values = c(positivity, negativity, objectivity)
@@ -227,7 +230,6 @@ sentiment_scores = function(articles, .progress='none') {
 results = read.csv(file="./articles/results.csv", row.names = NULL, header=T)
 tail(results)
 # cat("number of articles processed: ", nrow(num_articles))
-
 
 
 # ==== PLOT ====
@@ -278,7 +280,7 @@ p1 = ggplot()+
 # - Emotionality
 p2 = ggplot()+
   geom_line(emo_melt, mapping = aes(x=as.Date(DATE), y=value, colour = variable, group=variable)) + 
-  geom_line(corona_growth, lwd=1, mapping = aes(x=as.Date(DATE), y=new_cases/(max_case/max_emo), linetype="daily new cases")) +
+  geom_line(corona_growth, lwd=1, mapping = aes(x=as.Date(DATE), y=new_cases/(max_case/max_emo), linetype="daily new cases"), size=20) +
   theme_bw() +
   scale_color_brewer(palette='Paired') + # color palette used
   scale_linetype_manual(
@@ -291,10 +293,24 @@ p2 = ggplot()+
   ggtitle("Emotionality in Korean News Articles on COVID-19") +
   labs(color='Emotion') + # legend title emotions
   xlab("Date") +
-  ylab("Index")  # +  facet_wrap(vars(variable))
+  ylab("Index")  +  facet_wrap(vars(variable))
 
 p1
 
 # - Plot two graphs together
-plot_grid(p1, p2, align="v", ncol=1)
+# plot_grid(p1, p2, align="v", ncol=1)
+
+
+# ==== CORRELATION ====
+head(results[c(-1,-2)])
+head(corona_growth$new_cases)
+nrow(corona_growth)
+cor = cor(results[c(-1,-2)], corona_growth$new_cases)
+cor = as.data.frame(cor)
+colnames(cor) = "cor"
+cor["p-value"]<-(sapply(results[c(-1,-2)], function(y) {
+  return(cor.test(y, corona_growth$new_cases)$p.value)}
+))
+cor
+nrow(results)
 
