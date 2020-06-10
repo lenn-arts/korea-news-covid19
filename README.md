@@ -1,4 +1,4 @@
-# Correlation between the Development of COVID-19 Casesand Emotionality in News Reporting in South Ko
+# Correlation between the Development of COVID-19 Cases and Emotionality in News Reporting in South Korea
 
 ## Project
 
@@ -14,17 +14,17 @@ In this project, online articles from the South Korean newspapers The Korea Hera
 
 
 ## Contributors
-Lennart Schulze
-Sujin Lee
+- Lennart Schulze (Author)
+- Sujin Lee
 
 
 ## 3rd party 
 ### Lexicons
 - Stanford SocialSent Project (https://nlp.stanford.edu/projects/socialsent/)
-- NRI Emotions Index by 
+- NRC Emotion Intensity by Saif Mohammed (https://saifmohammad.com/WebPages/AffectIntensity.htm) 
 
 ### COVID-19 Cases
-- Joo eungen (https://github.com/jooeungen/Coronavirusboard_kr/blob/master/kr_daily.csv)
+- Joo eungen (https://github.com/jooeungen/Coronavirusboard_kr/blob/master/kr_daily.csv)
 
 ## License
 CC BY-SA-NC
