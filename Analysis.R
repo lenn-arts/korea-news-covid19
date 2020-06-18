@@ -8,7 +8,7 @@
 # 
 # imports:      see packages
 # Usage:        source(*filename*)
-# History:      1.1.0 2020-06-05
+# History:      1.1.1 2020-06-18
 # --------------------------------------------- 
 
 
@@ -60,7 +60,7 @@ emo_lex=read.table("./lexicons/NRC-Emotion-Intensity-Lexicon-v1.txt", sep="\t", 
 head(emo_lex)
 
 
-# - News articles 
+# - News articles  --> ACTIVATE (last 4)
 # kh_virus <- read.csv("./articles/articles_koreaherald_coronavirus.csv", header = T, sep=";")
 # kh_covid <- read.csv("./articles/articles_koreaherald_covid19.csv", header = T, sep=";")
 # kh_virus <- read.csv("./articles/articles_koreaherald_coronavirus_date.csv", header = T)
@@ -85,19 +85,18 @@ sample2 <- sample2[-1] # drop first column
 # - Date format change (for Korea Herald Articles)
 date_transform = function(row){
   date = unlist(row["DATE"])
-  date <- gsub(",","", date) %>% strsplit(" ")
+  date <- gsub(",","", date) %>% strsplit(" ") # replace , by space and split on space
   date <- unlist(date)
   year = date[3] # get year part of date string
   m = match(date[1], month.abb) # lookup month index from month.name constant
   m = sprintf("%02d", m) # extend to 2 digit
   day = date[2]  # get day part date string
   day = sprintf("%02d", as.numeric(day)) # extend to 2 digit
-  date = paste(year, m, day, sep="-")
-  row["DATE"] = date
+  date = paste(year, m, day, sep="-") # combine YYYY-MM-DD
+  row["DATE"] = date # insert newly formatted date 
   return(row)
 }
-
-# - Write transformed data (only once)
+# -> Write transformed data (only once)
 # sample <- t(apply(sample, 1, date_transform))
 # write.csv(t(apply(kh_virus, 1, date_transform)), file="./articles/articles_koreaherald_coronavirus_date.csv", row.names=F, sep=";")
 # write.csv(t(apply(kh_covid, 1, date_transform)), file="./articles/articles_koreaherald_covid19_date.csv", row.names=F, sep=";")
@@ -107,7 +106,7 @@ date_transform = function(row){
 
 # - Aggreagate articles from all sources in single data frame
 articles = rbind(sample1, sample2)  # sample
-# articles = rbind(kh_virus, kh_covid, kt_virus, kt_covid)  # real data
+# articles = rbind(kh_virus, kh_covid, kt_virus, kt_covid)  # real data   --> ACTIVATE (if articles shall be reprocessed)
 articles = distinct(articles) # eliminate copies (articles can contain both 'coronvirus', and 'covid-19')
 articles$DATE = as.Date(articles$DATE) # read dates (strings) as Date type -> necessary for sorting
 articles <- articles[order(articles$DATE), ] # order by date
@@ -156,7 +155,7 @@ sentiment_scores = function(articles, .progress='none') {
                    article = gsub("[[:punct:]]", " ", article)
                    # delete words that have only 1 character
                    article = gsub("(\\s.\\s){1}", " ", article) 
-                   # remove unnecessary spaces 
+                   # remove unnecessary spaces (1) more than one, 2) leading or ending)
                    article = gsub("[ \t]{2,}", " ", article) 
                    article = gsub("^\\s+|\\s+$", "", article)
                   
@@ -182,14 +181,14 @@ sentiment_scores = function(articles, .progress='none') {
                    # iterate over all words from aggreagated articles text of the current date
                    for (word in words){
                       pos_index = which(pos_neg_lex[,1]==word)
-                      if (length(pos_index) > 0){
-                        val = pos_neg_lex[pos_index, 2]
+                      if (length(pos_index) > 0){ # if word is in lexicon 
+                        val = pos_neg_lex[pos_index, 2] # find value
                         #print(val)
-                        if (val >= 0){
+                        if (val >= 0){ # add positive value to positive score
                           pos_score = pos_score + val
                           pos_count = pos_count + 1
                         }
-                        else if (val<0){
+                        else if (val<0){ # add negative value to negative score
                           neg_score = neg_score + (-val)
                           neg_count = neg_count + 1
                         }
@@ -204,30 +203,35 @@ sentiment_scores = function(articles, .progress='none') {
                         emo_values[match(category, emotions)] = emo_values[match(category, emotions)] + val # add to respective value in emotions vector
                       }
                    }
+                   # for all scores, devide by text length (word count) to get relative value
                    objectivity = 1 - ((pos_count+neg_count)/length(words)) # objectivity = inverse ratio of subjective words to text length
                    positivity = pos_score/length(words)
                    negativity = neg_score/length(words)
-                   pos_values = c(positivity, negativity, objectivity)
+                   pos_values = c(positivity, negativity, objectivity) # wrap pos/neg results in vector
                    print(c(positivity, negativity, objectivity))
                    
                    print(emo_values)
                    print(emo_values/length(words))
                    emo_values = emo_values/length(words)
                    
-                   values = c(pos_values, emo_values)
+                   values = c(pos_values, emo_values) # wrap all results in vector & return
                    return(values)
                  })
   # matrix with scores for each day
   return(t(values_list)) 
 } 
 
-# ---> TURN ON to calculate (takes very long, thus saved in file)
+
+# - Write results 
+# ---> ACTIVATE (to calculate scores; takes very long, thus saved in file)
 # sentiments=sentiment_scores(aggregates)
 # str(sentiments)
 # results[,-1] = as.data.frame(sentiments) # assign values to result data frame (keeping date column)
 # 
 # write.csv(results, file="./articles/results.csv", row.names=F, sep=";")
-results = read.csv(file="./articles/results.csv", row.names = NULL, header=T)
+
+# - Read results
+results = read.csv(file="./articles/results.csv", row.names = NULL, header=T) # read saved results from sentiment analysis to perform plotting 
 tail(results)
 # cat("number of articles processed: ", nrow(num_articles))
 
@@ -237,31 +241,31 @@ tail(results)
 # for draw the number of confirmed cases increased compared to the previous day
 # in this case for similar index set 1 person = 0.0001
 
-# calculate new cases per day
+# - Calculate new cases per day from coronavirus data file
 corona_growth_offset<- c(0, corona_growth[-length(corona_growth$confirmed), "confirmed"])  # shift confirmed_case column by 1
 corona_growth["new_cases"]=corona_growth$confirmed-corona_growth_offset  # ... to calculate new infections per day
 
-results<-cbind(results, corona_growth$growth)
+results<-cbind(results, corona_growth$growth) # bind new column to old data frame
 colnames(results)[13]<-"corona_growth"
 results<-results[,c(1,13,2:12)] # for emphasize corona_growth's color, change sequence
 # head(results)
 
 
 # - Create auxilary variables
+# melt values into single column data frames (needed for automatic grouping in plotting)
 pos_melt = melt(results[,c(1,3:5)], id=c("DATE"))
-emo_melt = melt(results[,c(1,6:13)], id=c("DATE")) # melt values into single column data frame
+emo_melt = melt(results[,c(1,6:13)], id=c("DATE")) 
 
+# calculate max values (needed for y-axis scaling)
 max_case = max(corona_growth$new_cases)
 max_pos = max(pos_melt$value)
 max_emo = max(emo_melt$value)
 
 # - Positivity / Negativity
 p1 = ggplot()+
-  geom_line(pos_melt, mapping = aes(x=as.Date(DATE), y=value, colour = variable, group=variable)) +
-  geom_line(corona_growth, lwd=1, mapping = aes(x=as.Date(DATE), y=new_cases/(max_case/max_pos), linetype="daily new cases")) +
-  # geom_line(corona_growth, lwd=1, mapping = aes(x=as.Date(DATE), y=growth*2, linetype="confirmed cases growth %")) +
-  # geom_line(corona_growth, lwd=1, mapping = aes(x=as.Date(DATE), y=confirmed*6, linetype="confirmed cases growth")) +
-  
+  geom_line(pos_melt, mapping = aes(x=as.Date(DATE), y=value, colour = variable, group=variable)) + # positivity values line plot
+  geom_line(corona_growth, lwd=1, mapping = aes(x=as.Date(DATE), y=new_cases/(max_case/max_pos), linetype="daily new cases")) + # coronavirus case growth line plot
+
   theme_bw() +
   scale_color_brewer(palette='Paired') + # color palette used
   scale_linetype_manual(
@@ -281,21 +285,23 @@ p1 = ggplot()+
 p2 = ggplot()+
   geom_line(emo_melt, mapping = aes(x=as.Date(DATE), y=value, colour = variable, group=variable)) + 
   geom_line(corona_growth, lwd=1, mapping = aes(x=as.Date(DATE), y=new_cases/(max_case/max_emo), linetype="daily new cases"), size=20) +
-  theme_bw() +
+  theme_bw() + # set theme
   scale_color_brewer(palette='Paired') + # color palette used
   scale_linetype_manual(
     name="COVID-19", # legend title
     values=c(5,1)) + # assign linetype style (where linetype set in geom_line(), in order of appearance)
   scale_y_continuous(
-    name = "Index", # 1st y axis name
+    name = "Index", # 1st y axis (name)
     sec.axis = sec_axis(~.*(max_case/max_emo), name="Cases")  # 2nd y axis (scaling + name)
   ) + 
-  ggtitle("Emotionality in Korean News Articles on COVID-19") +
+  ggtitle("Emotionality in Korean News Articles on COVID-19") + # graph title
   labs(color='Emotion') + # legend title emotions
-  xlab("Date") +
-  ylab("Index")  +  facet_wrap(vars(variable))
+  xlab("Date") + # x axis name
+  ylab("Index")  +  # y axis name
+  facet_wrap(vars(variable)) # multiplot graohs in grid
 
-p1
+#p1
+p2
 
 # - Plot two graphs together
 # plot_grid(p1, p2, align="v", ncol=1)
@@ -305,10 +311,10 @@ p1
 head(results[c(-1,-2)])
 head(corona_growth$new_cases)
 nrow(corona_growth)
-cor = cor(results[c(-1,-2)], corona_growth$new_cases)
+cor = cor(results[c(-1,-2)], corona_growth$new_cases) # calculate pearson correlation coefficients for each variable
 cor = as.data.frame(cor)
-colnames(cor) = "cor"
-cor["p-value"]<-(sapply(results[c(-1,-2)], function(y) {
+colnames(cor) = "cor_coefficient" # rename column
+cor["p-value"]<-(sapply(results[c(-1,-2)], function(y) { # calculate p-value for all coeffcients
   return(cor.test(y, corona_growth$new_cases)$p.value)}
 ))
 cor
